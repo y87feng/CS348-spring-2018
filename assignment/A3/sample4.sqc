@@ -1,0 +1,63 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "util.h"
+
+char *gets(char *str);
+
+EXEC SQL INCLUDE SQLCA; 
+
+EXEC SQL BEGIN DECLARE SECTION;
+   char db[6] = "cs348";
+   char url[72], name[20];
+EXEC SQL END DECLARE SECTION;
+
+int main(int argc, char *argv[]) {
+
+   printf("Sample C program: SAMPLE4\n" );
+
+   EXEC SQL WHENEVER SQLERROR  GO TO error;
+
+   EXEC SQL CONNECT TO :db;
+
+   printf("Connected to DB2\n");
+
+   EXEC SQL DECLARE author CURSOR
+         FOR SELECT name
+             FROM author
+             WHERE url IS NULL
+         FOR UPDATE OF url;
+
+   EXEC SQL OPEN author;
+   EXEC SQL WHENEVER NOT FOUND GO TO end;
+   for (;;) {
+     EXEC SQL FETCH author INTO :name;
+     printf("Author '%s' has no URL\n", name);
+     printf("enter URL to fix or <cr> to delete: ");
+     gets(url);
+     if (strcmp(url,"")==0) {
+       printf("Deleting '%s'\n",name);
+       EXEC SQL DELETE FROM author
+                WHERE CURRENT OF author;
+     } else {
+       printf("Seting URL for '%s' to '%s'\n",name,url);
+       EXEC SQL UPDATE author
+                SET url = :url
+                WHERE CURRENT OF author;
+     }
+   };
+end:
+   EXEC SQL CLOSE author;
+
+   EXEC SQL ROLLBACK;
+   EXEC SQL CONNECT reset;
+   exit(0);
+
+error:
+   check_error("My error",&sqlca);
+   EXEC SQL WHENEVER SQLERROR CONTINUE;
+
+   EXEC SQL ROLLBACK;
+   EXEC SQL CONNECT reset;
+   exit(1);
+}

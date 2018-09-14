@@ -1,0 +1,58 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "util.h"
+
+
+EXEC SQL INCLUDE SQLCA; 
+
+EXEC SQL BEGIN DECLARE SECTION;
+   char db[6] = "cs348";
+   char title[72], name[20], apat[10];
+   short aid;
+EXEC SQL END DECLARE SECTION;
+
+int main(int argc, char *argv[]) {
+   if (argc!=2) {
+      printf("Usage: sample3 <pattern>\n");
+      exit(1);
+   };
+
+   printf("Sample C program: SAMPLE3\n" );
+
+   EXEC SQL WHENEVER SQLERROR  GO TO error;
+
+   EXEC SQL CONNECT TO :db;
+
+   printf("Connected to DB2\n");
+
+   strncpy(apat,argv[1],8);
+     
+   EXEC SQL DECLARE author CURSOR FOR 
+             SELECT name, title 
+             FROM author , wrote, publication
+             WHERE name LIKE :apat
+               AND aid=author
+               AND pubid=publication;
+
+   EXEC SQL OPEN author;
+   EXEC SQL WHENEVER NOT FOUND GO TO end;
+   for (;;) {
+     EXEC SQL FETCH author INTO :name, :title;
+     printf("%10s -> %20s: %s\n",apat,name,title);
+     };
+end:
+   EXEC SQL CLOSE author;
+
+   EXEC SQL COMMIT;
+   EXEC SQL CONNECT RESET;
+   exit(0);
+
+error:
+   check_error("My error",&sqlca);
+   EXEC SQL WHENEVER SQLERROR CONTINUE;
+
+   EXEC SQL ROLLBACK;
+   EXEC SQL CONNECT reset;
+   exit(1);
+}

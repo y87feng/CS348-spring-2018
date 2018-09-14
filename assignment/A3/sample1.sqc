@@ -1,0 +1,33 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include "util.h"
+
+EXEC SQL INCLUDE SQLCA; 
+
+int main(int argc, char *argv[]) {
+   char * getpass();
+
+   EXEC SQL BEGIN DECLARE SECTION;
+      char db[6] = "cs348";
+   EXEC SQL END DECLARE SECTION;
+
+   printf("Sample C program: CONNECT\n" );
+
+   EXEC SQL WHENEVER SQLERROR  GO TO error;
+
+   EXEC SQL CONNECT TO :db;
+
+   printf("Connected to DB2\n");
+
+   EXEC SQL COMMIT;
+   EXEC SQL CONNECT reset;
+   exit(0);
+
+error:
+   check_error("My error",&sqlca);
+   EXEC SQL WHENEVER SQLERROR CONTINUE;
+
+   EXEC SQL ROLLBACK;
+   EXEC SQL CONNECT reset;
+   exit(1);
+}
